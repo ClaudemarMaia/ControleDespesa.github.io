@@ -7,46 +7,68 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
+    :root {
+      --bg-light: #f5f5f5;
+      --bg-dark: #1e1e2f;
+      --text-light: #000;
+      --text-dark: #f0f0f0;
+      --card-light: rgba(255,255,255,0.95);
+      --card-dark: rgba(50,50,70,0.95);
+    }
+
     body {
       font-family: Arial, sans-serif;
-      background-image: url('https://cdn.pixabay.com/photo/2014/12/21/23/28/grocery-store-576516_960_720.png');
-      background-size: cover;
-      background-repeat: no-repeat;
-      background-attachment: fixed;
-      background-position: center;
-      background-blend-mode: lighten;
-      background-color: #f5f5f5;
-      color: #000;
+      background: var(--bg-light);
+      color: var(--text-light);
       transition: background-color 0.3s, color 0.3s;
+      margin: 0;
+      padding: 0 10px;
     }
+
     body.dark-mode {
-      background-color: #1e1e2f;
-      color: #f0f0f0;
+      background-color: var(--bg-dark);
+      color: var(--text-dark);
     }
+
+    h1 {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    #themeToggle {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 10;
+    }
+
     .form-row {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       gap: 10px;
       margin-bottom: 10px;
-      background-color: rgba(255,255,255,0.9);
+      background-color: var(--card-light);
       padding: 10px;
       border-radius: 8px;
     }
-    body.dark-mode .form-row,
-    body.dark-mode table {
-      background-color: rgba(50,50,70,0.9);
+
+    body.dark-mode .form-row {
+      background-color: var(--card-dark);
     }
+
     .form-row label {
       display: flex;
       align-items: center;
       gap: 5px;
     }
+
     .form-row input,
     .form-row select {
       flex: 1 1 150px;
       padding: 6px;
     }
+
     button {
       cursor: pointer;
       border: none;
@@ -55,59 +77,50 @@
       padding: 8px 16px;
       border-radius: 4px;
     }
+
     button:hover {
       background-color: #45a049;
     }
+
     .button-clear {
       background-color: #f44336;
     }
+
     .button-clear:hover {
       background-color: #e53935;
     }
+
     .button-export {
       background-color: #2196F3;
     }
+
     .button-export:hover {
       background-color: #1976D2;
     }
-    table {
+
+    #tabela-despesas {
       width: 100%;
       border-collapse: collapse;
       margin-top: 10px;
-      background-color: rgba(255,255,255,0.9);
+      background-color: var(--card-light);
     }
-    th, td {
+
+    body.dark-mode #tabela-despesas {
+      background-color: var(--card-dark);
+    }
+
+    #tabela-despesas th, #tabela-despesas td {
       padding: 8px;
       text-align: left;
       border-bottom: 1px solid #ddd;
     }
-    tfoot td {
+
+    #tabela-despesas tfoot td {
       font-weight: bold;
     }
-    @media (max-width: 600px) {
-      .form-row {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-      table, thead, tbody, th, td, tr {
-        display: block;
-      }
-      thead {
-        display: none;
-      }
-      td::before {
-        content: attr(data-label);
-        font-weight: bold;
-        display: block;
-      }
-    }
-    #themeToggle {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-    }
-    h1 {
-      text-align: center;
+
+    @media (max-width: 768px) {
+      /* Cards foram removidos, mantendo o layout mobile simplificado */
     }
   </style>
 </head>
@@ -116,7 +129,7 @@
   <button id="themeToggle">🌙 Modo Escuro</button>
 
   <div class="form-row">
-    <label><span>📂</span>Categoria:</label>
+    <label>📂 Categoria:</label>
     <select id="categoria">
       <option value="">Selecione</option>
       <option>Alimentação</option>
@@ -124,11 +137,11 @@
       <option>Lazer</option>
       <option>Outros</option>
     </select>
-    <label><span>📝</span>Descrição:</label>
+    <label>📝 Descrição:</label>
     <input type="text" id="descricao" />
-    <label><span>🔢</span>Quantidade:</label>
+    <label>🔢 Quantidade:</label>
     <input type="number" id="quantidade" min="1" value="1" />
-    <label><span>💰</span>Preço Unitário (R$):</label>
+    <label>💰 Preço Unitário (R$):</label>
     <input type="number" id="preco" step="0.01" />
     <button onclick="adicionarDespesa()">➕ Adicionar</button>
     <button onclick="limparFormulario()" class="button-clear">🧹 Limpar</button>
@@ -174,8 +187,8 @@
 
     function atualizarTotal() {
       let total = 0;
-      tbody.querySelectorAll('tr').forEach(tr => {
-        total += parseFloat(tr.dataset.total || 0);
+      document.querySelectorAll('[data-total]').forEach(el => {
+        total += parseFloat(el.dataset.total || 0);
       });
       totalGeral.textContent = formatarMoeda(total);
     }
@@ -203,15 +216,15 @@
     function adicionarDespesa(categoriaVal, descricaoVal, quantidadeVal, precoVal, carregado = false) {
       const categoria = categoriaVal ?? document.getElementById('categoria').value;
       const descricao = descricaoVal ?? document.getElementById('descricao').value;
-      const quantidade = +quantidadeVal ?? +document.getElementById('quantidade').value;
-      const preco = +precoVal ?? +document.getElementById('preco').value;
+      const quantidade = quantidadeVal ?? +document.getElementById('quantidade').value;
+      const preco = precoVal ?? +document.getElementById('preco').value;
 
       if (!categoria || !descricao || quantidade <= 0 || preco <= 0) return;
 
       const total = quantidade * preco;
+
       const tr = document.createElement('tr');
       tr.dataset.total = total.toFixed(2);
-
       tr.innerHTML = `
         <td>${categoria}</td>
         <td>${descricao}</td>
@@ -220,11 +233,11 @@
         <td>${formatarMoeda(total)}</td>
         <td>
           <button onclick="editarLinha(this)">✏️</button>
-          <button onclick="this.closest('tr').remove(); salvarLocal(); atualizarTotal()">❌</button>
+          <button onclick="removerLinha(this)">❌</button>
         </td>
       `;
-
       tbody.appendChild(tr);
+
       atualizarTotal();
       if (!carregado) salvarLocal();
     }
@@ -237,6 +250,12 @@
       document.getElementById('quantidade').value = tds[2].innerText;
       document.getElementById('preco').value = parseFloat(tds[3].innerText.replace(/[^\d,]/g, '').replace(',', '.'));
       tr.remove();
+      atualizarTotal();
+      salvarLocal();
+    }
+
+    function removerLinha(botao) {
+      botao.closest('tr').remove();
       atualizarTotal();
       salvarLocal();
     }
